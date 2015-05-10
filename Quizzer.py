@@ -11,6 +11,7 @@ import re
 
 from Data import Statistic, DB
 from Config import Settings
+from KeyboardLayout import loadLayouts
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -151,6 +152,9 @@ class Quizzer(QWidget):
         self.result = QLabel()
         self.typer = Typer()
         self.label = WWLabel()
+        self.tryout_label = QLabel()
+        self.tryout_label.setText("Tryout layout: ")
+        self.tryout_layout = QComboBox()
         self.result.setVisible(Settings.get("show_last"))
         #self.label.setFrameStyle(QFrame.Raised | QFrame.StyledPanel)
         #self.typer.setBuddy(self.label)
@@ -159,17 +163,26 @@ class Quizzer(QWidget):
         self.connect(self.typer,  SIGNAL("cancel"), SIGNAL("wantText"))
         self.connect(Settings, SIGNAL("change_typer_font"), self.readjust)
         self.connect(Settings, SIGNAL("change_show_last"), self.result.setVisible)
+        self.connect(self.tryout_layout, SIGNAL("currentIndexChanged(int)"), self.changeTryoutLayout)
 
-        self.text = ('','', 0, None)
+        self.text = ('','', '', None)
+        self.originalText = ('','', '', None)
+        self.keyboardLayouts = []
 
         layout = QVBoxLayout()
         #layout.addWidget(self.info)
         #layout.addSpacing(20)
-        layout.addWidget(self.result, 0, Qt.AlignRight)
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self.tryout_label, 0, Qt.AlignLeft)
+        hlayout.addWidget(self.tryout_layout, 0, Qt.AlignLeft)
+        hlayout.addStretch()
+        hlayout.addWidget(self.result, 0, Qt.AlignRight)
+        layout.addLayout(hlayout)
         layout.addWidget(self.label, 1, Qt.AlignBottom)
         layout.addWidget(self.typer, 1)
         self.setLayout(layout)
         self.readjust()
+        self.addLayouts()
 
     def readjust(self):
         f = Settings.getFont("typer_font")
@@ -177,10 +190,27 @@ class Quizzer(QWidget):
         self.typer.setFont(f)
 
     def setText(self, text):
-        self.text = text
+        self.originalText = text
+        index = self.tryout_layout.currentIndex()
+        if index >= 1:
+            tryout_layout = self.keyboardLayouts[self.tryout_layout.currentIndex()]
+            self.text = (text[0], text[1], self.keyboardLayouts[0].convertTo(text[2], tryout_layout))
+        else:
+            self.text = text
         self.label.setText(self.text[2].replace(u"\n", u"↵\n"))
         self.typer.setTarget(self.text[2])
         self.typer.setFocus()
+
+    def addLayouts(self):
+        layouts = loadLayouts("layouts")
+        self.tryout_layout.clear()
+        self.tryout_layout.addItem("<None>")
+        for layout in layouts[1:]:
+            self.tryout_layout.addItem(layout.name)
+        self.keyboardLayouts = layouts
+
+    def changeTryoutLayout(self, index):
+        self.setText(self.originalText)
 
     def done(self):
         now = time.time()
