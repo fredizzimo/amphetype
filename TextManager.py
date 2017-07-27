@@ -19,13 +19,13 @@ from PyQt4.QtGui import *
 class SourceModel(AmphModel):
     def signature(self):
         self.hidden = 1
-        return (["Source", "Length", "Results", "WPM", "Dis."],
-                [None, None, None, "%.1f", None])
+        return (["Source", "Length", "Results", "WPM", "Disabled", "Lesson"],
+                [None, None, None, "%.1f", None, None])
 
     def populateData(self, idxs):
         if len(idxs) == 0:
             return map(list, DB.fetchall("""
-            select s.rowid,s.name,t.count,r.count,r.wpm,ifelse(nullif(t.dis,t.count),'No','Yes')
+            select s.rowid,s.name,t.count,r.count,r.wpm,ifelse(nullif(t.dis,t.count),'No','Yes'),ifelse(s.discount,'Yes','No')
                     from source as s
                     left join (select source,count(*) as count,count(disabled) as dis from text group by source) as t
                         on (s.rowid = t.source)
@@ -39,7 +39,7 @@ class SourceModel(AmphModel):
 
         r = self.rows[idxs[0]]
 
-        return map(list, DB.fetchall("""select t.rowid,substr(t.text,0,40)||"...",length(t.text),r.count,r.m,ifelse(t.disabled,'Yes','No')
+        return map(list, DB.fetchall("""select t.rowid,substr(t.text,0,40)||"...",length(t.text),r.count,r.m,ifelse(t.disabled,'Yes','No'),''
                 from (select rowid,* from text where source = ?) as t
                 left join (select text_id,count(*) as count,agg_median(wpm) as m from result group by text_id) as r
                     on (t.id = r.text_id)
