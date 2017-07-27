@@ -76,7 +76,8 @@ A typing program that not only measures your speed and progress, but also gives 
                         self.progress,
                         [AmphButton("Import Texts", self.addFiles), None,
                             AmphButton("Enable All", self.enableAll),
-                            AmphButton("Delete Disabled", self.removeDisabled), None,
+                            AmphButton("Delete Disabled", self.removeDisabled),
+                            AmphButton("Delete Selected", self.removeSelected), None,
                             AmphButton("Update List", self.update)],
                         [ #AmphButton("Remove", self.removeSelected), "or",
                             AmphButton("Toggle disabled", self.disableSelected),
@@ -249,6 +250,14 @@ A typing program that not only measures your speed and progress, but also gives 
 
     def removeDisabled(self):
         DB.execute('delete from text where disabled is not null')
+        self.removeUnused()
+        self.update()
+        DB.commit()
+
+    def removeSelected(self):
+        cats, texts = self.getSelected()
+        DB.executemany("delete from text where rowid = ?",
+                       map(lambda x:(x, ), texts))
         self.removeUnused()
         self.update()
         DB.commit()
